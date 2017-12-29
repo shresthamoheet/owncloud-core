@@ -314,7 +314,7 @@ class OwncloudPage extends Page {
 	}
 
 	/**
-	 * waits till all ajax calls are finished (jQuery.active === 0)
+	 * waits till all ajax calls are finished
 	 *
 	 * @param Session $session
 	 * @param int $timeout_msec
@@ -324,6 +324,33 @@ class OwncloudPage extends Page {
 		Session $session,
 		$timeout_msec = STANDARDUIWAITTIMEOUTMILLISEC
 	) {
+		$activeAjaxCountSet = $session->evaluateScript(
+			"(typeof window.activeAjaxCount === 'undefined')"
+		);
+		if ($activeAjaxCountSet === true) {
+			$session->executeScript(
+				'
+				window.activeAjaxCount = 0;
+				function isAllXhrComplete(){
+					window.activeAjaxCount--;
+				}
+				
+				(function(open) {
+					XMLHttpRequest.prototype.open = function() {
+						this.addEventListener("load", isAllXhrComplete);
+						return open.apply(this, arguments);
+					};
+				})(XMLHttpRequest.prototype.open);
+							
+				(function(send) {
+					XMLHttpRequest.prototype.send = function () {
+						window.activeAjaxCount++;
+						return send.apply(this, arguments);
+					};
+				})(XMLHttpRequest.prototype.send);
+				'
+			);
+		}
 		$timeout_msec = (int) $timeout_msec;
 		if ($timeout_msec <= 0) {
 			throw new \InvalidArgumentException("negative or zero timeout");
@@ -332,9 +359,20 @@ class OwncloudPage extends Page {
 		$end = $currentTime + ($timeout_msec / 1000);
 		while ($currentTime <= $end) {
 			try {
+				//wait for jQuery.active and
+				//window.activeAjaxCount that is set by the testing code
+				//to catch non-jQuery XHR requests
+				//but if window.activeAjaxCount was not set, ignore it
 				$waitingResult = $session->wait(
 					STANDARDSLEEPTIMEMILLISEC,
-					"(typeof jQuery != 'undefined' && (0 === jQuery.active))"
+					"(
+						typeof jQuery != 'undefined' 
+						&& (0 === jQuery.active) 
+						&& (
+							typeof window.activeAjaxCount === 'undefined' 
+							|| 0 === window.activeAjaxCount
+							)
+					)"
 				);
 				if ($waitingResult === true) {
 					break;
