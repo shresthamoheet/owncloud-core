@@ -384,7 +384,8 @@ class OwncloudPage extends Page {
 		$end = $currentTime + ($timeout_msec / 1000);
 		while ($currentTime <= $end) {
 			$activeAjax = $session->evaluateScript(
-				'
+				'(
+				function () {
 					var result = 0;
 					if (typeof window.activeAjaxCount === "number") {
 						result = result + window.activeAjaxCount;
@@ -393,9 +394,9 @@ class OwncloudPage extends Page {
 						result = result + jQuery.active;
 					}
 					return result;
+				})()
 				'
 			);
-			$activeAjax = $session->evaluateScript("jQuery.active");
 			if ((int) $activeAjax > 0) {
 				break;
 			}
