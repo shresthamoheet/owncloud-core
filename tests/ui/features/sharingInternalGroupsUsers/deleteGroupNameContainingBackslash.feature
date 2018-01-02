@@ -10,14 +10,24 @@ So that access to resources can be controlled more effectively
 
 	Scenario: delete group name containing "/"
 		And these groups exist:
-		|groupname     |
+		|groupname   |
 		|test/test   |
 		|&@/?        |
 		|123/        |
 		And I am on the users page
 		When I delete these groups:
 		|groupname|
-		|test/test   |
-		|&@/?        |
+  	|test/test   |
+  	|&@/?        |
 		|123/        |
 		And the users page is reloaded
+		Then these groups should not be listed:
+		|groupname   |
+  	|test/test   |
+  	|&@/?        |
+		|123/        |
+		And these groups should not exist:
+		|groupname   |
+  	|test/test   |
+  	|&@/?        |
+		|123/        |
